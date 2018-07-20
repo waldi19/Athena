@@ -82,22 +82,15 @@ class Bot extends Core {
             this.send(`USER ${this.config.ident} * * :${this.config.realname}`);
         });
 
-        this.socket.on('data', recv => {
-            const parsed = recv.toString().split('\r\n');
+        this.parser = new Parser();
+        this.socket.pipe(this.parser).on('data', event => {
+            log.debug('[RECV] %s', strip_formatting(event.raw));
 
-            for (let data of parsed) {
-                if (!data) continue; // Get rid of pesky new lines
-
-                const parse = new Parser(data);
-
-                log.debug('[RECV] %s', strip_formatting(data));
-
-                try {
-                    this.events.emit(parse.command, this.irc, parse);
-                    this.events.emit('all', this.irc, parse);
-                } catch (e) {
-                    log.error(e.stack);
-                }
+            try {
+                this.events.emit(event.command, this.irc, event);
+                this.events.emit('all', this.irc, event);
+            } catch (e) {
+                log.error(e.stack);
             }
         });
     }
